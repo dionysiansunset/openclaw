@@ -1,0 +1,47 @@
+name: Compile Docs to Single Markdown
+
+on:
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Compile all docs markdown files
+        run: |
+          OUTPUT="openclaw-docs-compiled.md"
+          echo "# OpenClaw Documentation (Compiled)" > $OUTPUT
+          echo "" >> $OUTPUT
+          echo "_Generated on $(date -u '+%Y-%m-%d %H:%M UTC') from the OpenClaw docs folder._" >> $OUTPUT
+          echo "" >> $OUTPUT
+
+          # Find all .md files under docs/, skip ja-JP, zh-CN (non-English), sort for consistency
+          find docs -name "*.md" \
+            ! -path "*/ja-JP/*" \
+            ! -path "*/zh-CN/*" \
+            ! -path "*/.i18n/*" \
+            | sort | while read file; do
+            echo "" >> $OUTPUT
+            echo "---" >> $OUTPUT
+            echo "" >> $OUTPUT
+            echo "<!-- SOURCE: $file -->" >> $OUTPUT
+            echo "" >> $OUTPUT
+            cat "$file" >> $OUTPUT
+            echo "" >> $OUTPUT
+          done
+
+          echo "Compiled $(find docs -name '*.md' ! -path '*/ja-JP/*' ! -path '*/zh-CN/*' ! -path '*/.i18n/*' | wc -l) markdown files into $OUTPUT"
+          wc -l $OUTPUT
+
+      - name: Commit compiled docs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add openclaw-docs-compiled.md
+          git commit -m "chore: compile all docs into single markdown for Perplexity Space upload"
+          git push
